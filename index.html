@@ -78,9 +78,75 @@
   #sigimg.show { opacity: 1; }
   body.shake { animation: shake .3s; }
   @keyframes shake { 25% { transform: translate(6px,-4px); } 50% { transform: translate(-5px,5px); } 75% { transform: translate(3px,-2px); } }
+
+  /* ---------- gift gate ---------- */
+  #gate {
+    position: fixed; inset: 0; z-index: 20; background: radial-gradient(ellipse at center, #120d05 0%, #000 70%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: "Playfair Display", Georgia, serif; transition: opacity 1.2s ease;
+  }
+  #gate.gone { opacity: 0; pointer-events: none; }
+  #gate .hello { color: #f3d27a; font-size: clamp(20px, 5vw, 30px); font-weight: 600; margin-bottom: 6px; text-align: center; padding: 0 20px; text-shadow: 0 0 14px rgba(243,210,122,.4); }
+  #gate .small { color: #a8946a; font-style: italic; font-size: 15px; margin-bottom: 34px; text-align: center; padding: 0 20px; }
+  .gift { position: relative; width: 180px; height: 160px; animation: bob 2.4s ease-in-out infinite; }
+  .gift.wrong { animation: wiggle .5s; }
+  @keyframes bob { 50% { transform: translateY(-8px); } }
+  @keyframes wiggle { 20% { transform: rotate(-8deg); } 40% { transform: rotate(7deg); } 60% { transform: rotate(-5deg); } 80% { transform: rotate(3deg); } }
+  .gift .box, .gift .lid {
+    position: absolute; background: linear-gradient(160deg, #241a0a, #0c0904);
+    border: 2px solid #c9a03c; border-radius: 6px; box-shadow: 0 0 24px rgba(243,210,122,.18);
+  }
+  .gift .box { left: 12px; bottom: 0; width: 156px; height: 104px; }
+  .gift .lid { left: 0; top: 22px; width: 180px; height: 38px; z-index: 2; transition: transform .9s cubic-bezier(.3,1.4,.5,1), opacity .9s; }
+  .gift .box::before, .gift .lid::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: 22px; transform: translateX(-50%);
+    background: linear-gradient(90deg, #a10e1f, #e0182d, #a10e1f);
+  }
+  .gift .bow { position: absolute; left: 50%; top: -30px; width: 0; height: 0; }
+  .gift .bow i {
+    position: absolute; width: 38px; height: 30px; border: 7px solid #e0182d; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    top: 0;
+  }
+  .gift .bow i:first-child { right: 2px; transform: rotate(-25deg); }
+  .gift .bow i:last-child { left: 2px; transform: rotate(25deg); }
+  .gift .bow b { position: absolute; left: -9px; top: 18px; width: 18px; height: 16px; background: #c3122a; border-radius: 4px; }
+  .gift .glow {
+    position: absolute; left: 50%; bottom: 70px; width: 30px; height: 30px; border-radius: 50%;
+    transform: translate(-50%, 50%) scale(0); opacity: 0; z-index: 1;
+    background: radial-gradient(circle, #fff6d5 0%, #f3d27a 30%, rgba(243,210,122,0) 70%);
+    transition: transform 1.2s ease-out, opacity 1.2s;
+  }
+  .gift.open { animation: none; }
+  .gift.open .lid { transform: translate(40px, -170px) rotate(28deg); opacity: 0; }
+  .gift.open .glow { transform: translate(-50%, 50%) scale(60); opacity: 1; }
+  #gate form { margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 14px; transition: opacity .5s; }
+  #gate.opening form, #gate.opening .hello, #gate.opening .small { opacity: 0; }
+  #pw {
+    width: min(70vw, 260px); padding: 12px 18px; border-radius: 30px; text-align: center;
+    background: #0b0905; color: #f3d27a; border: 1px solid #7a6635; outline: none;
+    font-family: inherit; font-size: 17px; letter-spacing: 2px;
+  }
+  #pw:focus { border-color: #f3d27a; box-shadow: 0 0 14px rgba(243,210,122,.35); }
+  #pw::placeholder { color: #6e5f3c; letter-spacing: 0; font-style: italic; }
+  #openBtn { background: linear-gradient(135deg, #f7e19b, #c9a03c); color: #1a1205; border: none; box-shadow: 0 0 22px rgba(243,210,122,.45); }
+  #gate .err { color: #ff6b81; font-size: 15px; min-height: 20px; font-style: italic; }
 </style>
 </head>
 <body>
+<div id="gate">
+  <div class="hello">Có một món quà dành cho em</div>
+  <div class="small">Chỉ người được chọn mới mở được.</div>
+  <div class="gift" id="gift">
+    <div class="glow"></div>
+    <div class="lid"><div class="bow"><i></i><i></i><b></b></div></div>
+    <div class="box"></div>
+  </div>
+  <form id="gateForm" autocomplete="off">
+    <input id="pw" type="password" placeholder="Nhập mật khẩu" aria-label="Mật khẩu">
+    <button id="openBtn" type="submit">Mở quà</button>
+    <div class="err" id="err"></div>
+  </form>
+</div>
 <canvas id="c"></canvas>
 <div id="taunt"></div>
 <div class="panel">
@@ -260,9 +326,41 @@ function type(text, done) {
     else done && done();
   })();
 }
-setTimeout(() => type('Trái tim này… tôi cho phép em giữ.', () => {
-  setTimeout(() => document.getElementById('btns').classList.add('show'), 400);
-}), 1500);
+function startMain() {
+  setTimeout(() => type('Trái tim này… tôi cho phép em giữ.', () => {
+    setTimeout(() => document.getElementById('btns').classList.add('show'), 400);
+  }), 1200);
+}
+
+// ---------- password gate ----------
+// Đổi mật khẩu: thay chuỗi dưới bằng SHA-256 của mật khẩu mới (viết thường, không khoảng trắng 2 đầu)
+const PASS_HASH = 'e4ad93ca07acb8d908a3aa41e920ea4f4ef4f26e7f86cf8291c5db289780a5ae';
+const wrongMsgs = ['Sai rồi. Thử lại đi.', 'Em quên rồi sao?', 'Nghĩ kỹ chưa?', 'Vẫn sai. Tôi kiên nhẫn có giới hạn đấy.'];
+let wrongCount = 0;
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(x => x.toString(16).padStart(2, '0')).join('');
+}
+document.getElementById('gateForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const pw = document.getElementById('pw');
+  const gift = document.getElementById('gift');
+  const err = document.getElementById('err');
+  let ok = false;
+  try { ok = (await sha256(pw.value.trim().toLowerCase())) === PASS_HASH; } catch (_) {}
+  if (!ok) {
+    err.textContent = wrongMsgs[Math.min(wrongCount++, wrongMsgs.length - 1)];
+    gift.classList.remove('wrong'); void gift.offsetWidth; gift.classList.add('wrong');
+    pw.select();
+    return;
+  }
+  pw.blur();
+  const gate = document.getElementById('gate');
+  gate.classList.add('opening');
+  gift.classList.add('open');
+  setTimeout(() => gate.classList.add('gone'), 1100);
+  setTimeout(() => { gate.remove(); startMain(); }, 2300);
+});
 
 // runaway "Từ chối"
 const no = document.getElementById('no');
