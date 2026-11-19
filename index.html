@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trái tim Lý Tuân</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,800;1,500&display=swap&subset=vietnamese" rel="stylesheet">
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  .panel {
+    position: fixed; left: 0; right: 0; bottom: 9vh; text-align: center;
+    font-family: "Playfair Display", Georgia, serif; pointer-events: none;
+  }
+  #quote {
+    color: #f3d27a; font-style: italic; font-weight: 500;
+    font-size: clamp(20px, 4.6vw, 34px); letter-spacing: .5px; padding: 0 20px;
+    text-shadow: 0 0 14px rgba(243,210,122,.45);
+    min-height: 1.4em; transition: opacity .6s;
+  }
+  #quote .cursor { display: inline-block; width: 2px; height: 1em; background: #f3d27a; margin-left: 3px; vertical-align: -0.12em; animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .btns { margin-top: 26px; display: flex; gap: 22px; justify-content: center; opacity: 0; transition: opacity 1s; }
+  .btns.show { opacity: 1; pointer-events: auto; }
+  button {
+    font-family: inherit; font-weight: 600; font-size: clamp(16px, 3.6vw, 20px);
+    padding: 12px 34px; border-radius: 40px; cursor: pointer; letter-spacing: 1px;
+    transition: transform .15s, box-shadow .2s;
+  }
+  #sign { background: linear-gradient(135deg, #f7e19b, #c9a03c); color: #1a1205; border: none; box-shadow: 0 0 22px rgba(243,210,122,.55); }
+  #sign:hover { transform: scale(1.06); box-shadow: 0 0 34px rgba(243,210,122,.85); }
+  #no { background: transparent; color: #c9b27a; border: 1px solid #7a6635; }
+  #no.flee { position: fixed; z-index: 5; transition: left .18s ease-out, top .18s ease-out; }
+  #taunt {
+    position: fixed; left: 0; right: 0; top: 7vh; text-align: center; color: #fff;
+    font-family: "Playfair Display", Georgia, serif; font-size: clamp(17px, 3.8vw, 24px);
+    opacity: 0; transition: opacity .5s; pointer-events: none; text-shadow: 0 0 10px #000;
+  }
+  #stamp {
+    position: fixed; left: 50%; top: 40%; z-index: 6; pointer-events: none;
+    font-family: "Playfair Display", Georgia, serif; font-weight: 800;
+    font-size: clamp(34px, 9vw, 72px); color: #e0182d; letter-spacing: 4px;
+    border: 6px solid #e0182d; border-radius: 12px; padding: 6px 22px;
+    transform: translate(-50%, -50%) rotate(-14deg) scale(3); opacity: 0;
+    mix-blend-mode: screen; text-shadow: 0 0 8px rgba(224,24,45,.6);
+  }
+  #stamp.hit { animation: stamp .45s cubic-bezier(.2,1.6,.4,1) forwards; }
+  @keyframes stamp {
+    0% { transform: translate(-50%,-50%) rotate(-14deg) scale(3); opacity: 0; }
+    100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1); opacity: .92; }
+  }
+  #pad {
+    position: fixed; inset: 0; z-index: 7; display: flex; align-items: center; justify-content: center;
+    background: rgba(0,0,0,.6); backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .4s;
+    font-family: "Playfair Display", Georgia, serif;
+  }
+  #pad.show { opacity: 1; pointer-events: auto; }
+  #pad .sheet {
+    width: min(92vw, 460px); padding: 22px 20px 18px; border-radius: 16px; text-align: center;
+    background: linear-gradient(160deg, #17130b, #0b0905); border: 1px solid #7a6635;
+    box-shadow: 0 0 40px rgba(243,210,122,.2); transform: translateY(20px); transition: transform .4s;
+  }
+  #pad.show .sheet { transform: none; }
+  #pad .title { color: #f3d27a; font-weight: 800; font-size: 24px; letter-spacing: 1px; }
+  #pad .sub { color: #a8946a; font-style: italic; font-size: 14px; margin: 6px 0 14px; }
+  #sig {
+    width: 100%; height: 190px; display: block; border-radius: 10px; touch-action: none; cursor: crosshair;
+    background: repeating-linear-gradient(0deg, transparent 0 149px, rgba(243,210,122,.35) 149px 150px), #050403;
+    border: 1px dashed #5c4d28;
+  }
+  #pad .row { display: flex; gap: 14px; justify-content: center; margin-top: 16px; }
+  #clear { background: transparent; color: #c9b27a; border: 1px solid #7a6635; padding: 10px 26px; }
+  #ok { background: linear-gradient(135deg, #f7e19b, #c9a03c); color: #1a1205; border: none; padding: 10px 26px; }
+  #ok:disabled { opacity: .35; cursor: not-allowed; }
+  #sigimg { display: block; margin: 10px auto 0; width: min(60vw, 260px); opacity: 0; transition: opacity 1s; }
+  #sigimg.show { opacity: 1; }
+  body.shake { animation: shake .3s; }
+  @keyframes shake { 25% { transform: translate(6px,-4px); } 50% { transform: translate(-5px,5px); } 75% { transform: translate(3px,-2px); } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="taunt"></div>
+<div class="panel">
+  <div id="quote"></div>
+  <div class="btns" id="btns">
+    <button id="sign">Ký</button>
+    <button id="no">Từ chối</button>
+  </div>
+  <img id="sigimg" alt="">
+</div>
+<div id="pad">
+  <div class="sheet">
+    <div class="title">Chữ ký của em</div>
+    <div class="sub">Ký vào đây. Ký rồi thì không được hối hận.</div>
+    <canvas id="sig"></canvas>
+    <div class="row">
+      <button id="clear">Ký lại</button>
+      <button id="ok" disabled>Xác nhận</button>
+    </div>
+  </div>
+</div>
+<script>
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+let W, H, S, dpr;
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2);
+  W = innerWidth; H = innerHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  S = Math.min(W, H * 0.8) / 42;
+}
+addEventListener('resize', resize);
+resize();
+
+function heart(t) {
+  return [16 * Math.pow(Math.sin(t), 3),
+    -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))];
+}
+const edge = [], inner = [], halo = [], sparks = [];
+for (let i = 0; i < 1800; i++) {
+  const [x, y] = heart(Math.random() * Math.PI * 2);
+  edge.push({ x, y, s: 1 + Math.random() * 1.2 });
+  const k = 1 - 0.35 * Math.pow(Math.random(), 1.8);
+  inner.push({ x: x * k + (Math.random() - .5) * .8, y: y * k + (Math.random() - .5) * .8, s: .6 + Math.random() });
+}
+for (let i = 0; i < 3500; i++) {
+  const [x, y] = heart(Math.random() * Math.PI * 2);
+  const k = 1 - 0.85 * Math.pow(Math.random(), 0.6);
+  inner.push({ x: x * k + (Math.random() - .5) * .6, y: y * k + (Math.random() - .5) * .6, s: .5 + Math.random() * .8 });
+}
+function newHalo() {
+  const [x, y] = heart(Math.random() * Math.PI * 2);
+  return { x, y, k: 1 + Math.random() * 0.15, life: 0, sp: .004 + Math.random() * .01, s: .5 + Math.random() };
+}
+for (let i = 0; i < 700; i++) { const h = newHalo(); h.life = Math.random(); halo.push(h); }
+
+let t = 0, signed = false, extra = 0, signAt = 0;
+function center() { return [W / 2, H * 0.38]; }
+
+// scatter direction for the post-sign explosion
+for (const p of edge.concat(inner)) {
+  const a = Math.atan2(p.y, p.x) + (Math.random() - .5) * 1.4;
+  const d = 8 + Math.random() * 32;
+  p.dx = Math.cos(a) * d; p.dy = Math.sin(a) * d;
+}
+const easeOut = x => 1 - Math.pow(1 - x, 3);
+const easeInOut = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const clamp01 = x => Math.max(0, Math.min(1, x));
+const mixc = (a, b, m) => a.map((v, i) => Math.round(v + (b[i] - v) * m));
+
+// small floating hearts
+const floaters = [];
+const heartPoly = [];
+for (let i = 0; i < 28; i++) { const [x, y] = heart(i / 28 * Math.PI * 2); heartPoly.push([x / 17, y / 17]); }
+function drawMiniHeart(x, y, size, rot, color) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(size, size);
+  ctx.beginPath();
+  heartPoly.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py));
+  ctx.closePath(); ctx.fillStyle = color; ctx.fill(); ctx.restore();
+}
+
+function frame() {
+  t += signed ? 0.025 : 0.02;          // slower beat
+  const b = Math.pow(Math.sin(t), 8);
+  const beat = 1 + (0.09 + extra) * b;
+  const [cx, cy] = center();
+
+  // post-sign timeline
+  let scatter = 0, gold = 0, flip = 1, el = 0;
+  if (signed) {
+    el = (performance.now() - signAt) / 1000;
+    if (el < 0.9) scatter = easeOut(el / 0.9);
+    else scatter = 1 - easeInOut(clamp01((el - 0.9) / 1.7));
+    gold = easeInOut(clamp01((el - 0.9) / 1.7));
+    if (el > 2.6 && el < 4.4) flip = Math.cos(easeInOut((el - 2.6) / 1.8) * Math.PI * 2);
+  }
+  const sxF = flip;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'lighter';
+
+  const draw = (arr, color, amp) => {
+    ctx.fillStyle = color;
+    for (const p of arr) {
+      const d = Math.hypot(p.x, p.y) || 1;
+      const push = b * amp / d * 14;
+      const x = (p.x * beat + p.x * push + (Math.random() - .5) * .25) * sxF + p.dx * scatter;
+      const y = p.y * beat + p.y * push + (Math.random() - .5) * .25 + p.dy * scatter;
+      ctx.fillRect(cx + x * S, cy + y * S, p.s, p.s);
+    }
+  };
+  const e = mixc([255, 59, 107], [255, 214, 110], gold);
+  const n = mixc([255, 70, 120], [255, 140, 90], gold);
+  draw(edge, `rgb(${e})`, 0.04);
+  draw(inner, `rgba(${n},0.75)`, 0.08);
+
+  for (let i = 0; i < halo.length; i++) {
+    const p = halo[i];
+    p.life += p.sp; p.k += p.sp * 0.5;
+    if (p.life > 1) { halo[i] = newHalo(); continue; }
+    const a = Math.sin(p.life * Math.PI) * 0.8 * (1 - scatter);
+    const kk = p.k * (1 + 0.06 * b);
+    const c = mixc([255, 120 + (p.s * 60) | 0, 180], [255, 200 + (p.s * 30) | 0, 110], gold);
+    ctx.fillStyle = `rgba(${c},${a})`;
+    ctx.fillRect(cx + p.x * kk * S * sxF + (Math.random() - .5), cy + p.y * kk * S + (Math.random() - .5), p.s, p.s);
+  }
+
+  // floating hearts after the heart reforms
+  if (signed && el > 2.4 && Math.random() < 0.12) {
+    floaters.push({ x: Math.random() * W, y: H + 20, vy: .5 + Math.random() * 1.2,
+      size: 5 + Math.random() * 11, ph: Math.random() * 6.28, rot: (Math.random() - .5) * .6,
+      hue: Math.random() < .5 ? '255,90,130' : '255,205,110' });
+  }
+  for (let i = floaters.length - 1; i >= 0; i--) {
+    const f = floaters[i];
+    f.y -= f.vy; f.ph += 0.03;
+    if (f.y < -30) { floaters.splice(i, 1); continue; }
+    const a = Math.min(1, f.y / (H * 0.5)) * 0.7;
+    drawMiniHeart(f.x + Math.sin(f.ph) * 18, f.y, f.size, f.rot + Math.sin(f.ph) * .2, `rgba(${f.hue},${a})`);
+  }
+
+  // fireworks
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const p = sparks[i];
+    p.x += p.vx; p.y += p.vy; p.vy += 0.035; p.vx *= 0.985; p.vy *= 0.985; p.life -= p.decay;
+    if (p.life <= 0) { sparks.splice(i, 1); continue; }
+    ctx.fillStyle = `hsla(${p.h},100%,${60 + 20 * p.life}%,${p.life})`;
+    ctx.fillRect(p.x, p.y, p.s, p.s);
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  extra *= 0.97;
+  requestAnimationFrame(frame);
+}
+frame();
+
+function burst(x, y, n, hues) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = 1 + Math.random() * 6;
+    sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 1,
+      decay: .008 + Math.random() * .012, s: 1 + Math.random() * 2,
+      h: hues[(Math.random() * hues.length) | 0] + Math.random() * 15 });
+  }
+}
+
+// typewriter
+const quote = document.getElementById('quote');
+function type(text, done) {
+  quote.innerHTML = '<span></span><i class="cursor"></i>';
+  const span = quote.firstChild;
+  const chars = Array.from(text);
+  let i = 0;
+  (function step() {
+    span.textContent = chars.slice(0, ++i).join('');
+    if (i < chars.length) setTimeout(step, chars[i - 1] === '…' ? 450 : 85);
+    else done && done();
+  })();
+}
+setTimeout(() => type('Trái tim này… tôi cho phép em giữ.', () => {
+  setTimeout(() => document.getElementById('btns').classList.add('show'), 400);
+}), 1500);
+
+// runaway "Từ chối"
+const no = document.getElementById('no');
+const sign = document.getElementById('sign');
+const taunt = document.getElementById('taunt');
+const taunts = ['Em chắc chưa?', 'Đừng thử thách sự kiên nhẫn của tôi.', 'Nút này không dành cho em.',
+  'Em nghĩ em có quyền từ chối sao?', 'Tôi đã nói rồi, thứ tôi muốn chưa bao giờ không có được.', 'Ngoan, bấm "Ký" đi.'];
+let flees = 0, tauntTimer;
+function flee(e) {
+  if (signed) return;
+  if (e) e.preventDefault();
+  const r = no.getBoundingClientRect();
+  if (!no.classList.contains('flee')) {
+    no.style.left = r.left + 'px'; no.style.top = r.top + 'px';
+    no.classList.add('flee');
+    void no.offsetWidth;
+  }
+  const s = sign.getBoundingClientRect();
+  let x, y, tries = 0;
+  do {
+    x = 10 + Math.random() * (W - r.width - 20);
+    y = 10 + Math.random() * (H - r.height - 20);
+    tries++;
+  } while (tries < 30 && (Math.hypot(x - r.left, y - r.top) < 150 ||
+           (x < s.right + 20 && x + r.width > s.left - 20 && y < s.bottom + 20 && y + r.height > s.top - 20)));
+  no.style.left = x + 'px'; no.style.top = y + 'px';
+  flees++;
+  if (flees % 2 === 0) {
+    taunt.textContent = taunts[Math.min(flees / 2 - 1, taunts.length - 1)];
+    taunt.style.opacity = 1;
+    clearTimeout(tauntTimer);
+    tauntTimer = setTimeout(() => taunt.style.opacity = 0, 2200);
+  }
+}
+no.addEventListener('pointerenter', flee);
+no.addEventListener('pointerdown', flee);
+no.addEventListener('touchstart', flee, { passive: false });
+no.addEventListener('click', flee);
+
+// "Ký" -> open signature pad
+const pad = document.getElementById('pad');
+const sc = document.getElementById('sig');
+const sx = sc.getContext('2d');
+let drawing = false, inked = 0, last = null;
+function setupPad() {
+  const r = sc.getBoundingClientRect(), d = Math.min(window.devicePixelRatio || 1, 2);
+  sc.width = r.width * d; sc.height = r.height * d;
+  sx.setTransform(d, 0, 0, d, 0, 0);
+  sx.lineCap = 'round'; sx.lineJoin = 'round'; sx.strokeStyle = '#f3d27a'; sx.lineWidth = 3;
+  sx.shadowColor = 'rgba(243,210,122,.6)'; sx.shadowBlur = 4;
+  inked = 0; document.getElementById('ok').disabled = true;
+}
+function pos(e) { const r = sc.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+sc.addEventListener('pointerdown', e => { drawing = true; last = pos(e); sc.setPointerCapture(e.pointerId); e.preventDefault(); });
+sc.addEventListener('pointermove', e => {
+  if (!drawing) return;
+  const p = pos(e);
+  sx.beginPath(); sx.moveTo(last[0], last[1]); sx.lineTo(p[0], p[1]); sx.stroke();
+  inked += Math.hypot(p[0] - last[0], p[1] - last[1]); last = p;
+  if (inked > 60) document.getElementById('ok').disabled = false;
+});
+['pointerup', 'pointercancel'].forEach(ev => sc.addEventListener(ev, () => drawing = false));
+document.getElementById('clear').addEventListener('click', () => { sx.clearRect(0, 0, sc.width, sc.height); setupPad(); });
+
+sign.addEventListener('click', () => {
+  if (signed) return;
+  document.getElementById('btns').classList.remove('show');
+  no.style.opacity = 0; no.style.pointerEvents = 'none';
+  taunt.style.opacity = 0;
+  pad.classList.add('show');
+  setupPad();
+});
+
+document.getElementById('ok').addEventListener('click', () => {
+  if (signed || inked <= 60) return;
+  signed = true; extra = 0.15; signAt = performance.now();
+  const img = document.getElementById('sigimg');
+  img.src = sc.toDataURL('image/png');
+  document.getElementById('btns').style.display = 'none';
+  pad.classList.remove('show');
+  setTimeout(() => img.classList.add('show'), 300);
+  const [cx, cy] = center();
+  burst(cx, cy, 500, [0, 340, 45]);
+  document.body.classList.add('shake');
+  // fireworks start once the heart has reformed and flipped
+  setTimeout(() => {
+    let n = 0;
+    const fw = setInterval(() => {
+      burst(W * (.15 + Math.random() * .7), H * (.1 + Math.random() * .4), 160, [[0], [45], [330], [200]][n % 4]);
+      if (++n > 10) clearInterval(fw);
+    }, 650);
+  }, 4300);
+});
+</script>
+</body>
+</html>
