@@ -134,8 +134,6 @@
 </head>
 <body>
 <div id="gate">
-  <div class="hello">Có một món quà dành cho em</div>
-  <div class="small">Chỉ người được chọn mới mở được.</div>
   <div class="gift" id="gift">
     <div class="glow"></div>
     <div class="lid"><div class="bow"><i></i><i></i><b></b></div></div>
@@ -334,7 +332,7 @@ function startMain() {
 
 // ---------- password gate ----------
 // Đổi mật khẩu: thay chuỗi dưới bằng SHA-256 của mật khẩu mới (viết thường, không khoảng trắng 2 đầu)
-const PASS_HASH = 'e4ad93ca07acb8d908a3aa41e920ea4f4ef4f26e7f86cf8291c5db289780a5ae';
+const PASS_HASH = 'dbeff4855507dc6dc3a91c4d4e05fa3ce6e002f552d0c56a08b2f739e90d7a74';
 const wrongMsgs = ['Sai rồi. Thử lại đi.', 'Em quên rồi sao?', 'Nghĩ kỹ chưa?', 'Vẫn sai. Tôi kiên nhẫn có giới hạn đấy.'];
 let wrongCount = 0;
 async function sha256(str) {
